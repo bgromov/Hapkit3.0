@@ -1,5 +1,4 @@
 #include <TimerOne.h>
-
 #include <hapkit3.h>
 
 static FILE uartout = {0};
@@ -70,8 +69,6 @@ void setup() {
   stdout = &uartout;
   //////////////////////
   hapkit = new Hapkit(HAPKIT_YELLOW, 2, A2);
-//  hapkit.configure(0.00575);   // Hapkit No.1 (yellow)
-//  hapkit.configure(0.00420);   // Hapkit No.2 (blue)
   hapkit->setUpdateRate(2000.0);
 
   timer_tck.initialize(1000000 / hapkit->getUpdateRate()); // 2 kHz by default
