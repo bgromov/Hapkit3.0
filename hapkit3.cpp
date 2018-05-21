@@ -16,6 +16,11 @@
 
 #include "hapkit3.h"
 
+static float g_UpdateRate = 2000.0f;
+
+// #define LOOP_RATE (2000.0) // 0.5 kHz
+#define LOOP_PERIOD (1.0 / g_UpdateRate) // [sec]
+
 #if defined(__AVR__)
 HapkitSensor::HapkitSensor(uint8_t pin, int16_t flip_threshold)
 #elif defined(__MBED__)
@@ -54,7 +59,7 @@ void HapkitSensor::reset()
   // timer_tck.attachInterrupt(&HapkitSensor::readSensor, 2000);
 #elif defined(__MBED__)
   timer_tck.detach();
-  timer_tck.attach_us(callback(this, &HapkitSensor::readSensor), 1000000 / LOOP_RATE);
+  timer_tck.attach_us(callback(this, &HapkitSensor::readSensor), 1000000 / g_UpdateRate);
 #endif
 }
 
@@ -196,9 +201,9 @@ Hapkit::Hapkit(const hapkit_kinematics_t kin, uint8_t motornum, PinName sensor_p
 : motornum(motornum), sensor_pin(sensor_pin),
   motor(motornum), sensor(sensor_pin), effects(NULL), effects_len(0),
   duty_th(0.01f),
-  // pos_filter(500.0, LOOP_RATE),
-  vel_filter(10.0, LOOP_RATE),
-  acc_filter(5.0, LOOP_RATE)
+  // pos_filter(500.0, g_UpdateRate),
+  vel_filter(10.0, g_UpdateRate),
+  acc_filter(5.0, g_UpdateRate)
 {
     // Kinematics variables
     rp = kin.pulley_radius;
@@ -213,7 +218,7 @@ void Hapkit::startLoop()
 {
   #if defined(__AVR__)
   #elif defined(__MBED__)
-  force_tck.attach_us(callback(this, &Hapkit::update), 1000000 / LOOP_RATE); // 2 kHz
+  force_tck.attach_us(callback(this, &Hapkit::update), 1000000 / g_UpdateRate); // 2 kHz
   #endif
 }
 
@@ -444,4 +449,21 @@ void Hapkit::setForce(float force)
   }
 
   motor.setSpeed(duty);
+}
+
+float Hapkit::getUpdateRate()
+{
+  return g_UpdateRate;
+}
+
+void Hapkit::setUpdateRate(float rate)
+{
+  if (rate > 0.0f)
+  {
+    g_UpdateRate = rate;
+  }
+  else
+  {
+    printf("Invalid update rate: %3.2f. Ignoring...\n", rate);
+  }
 }

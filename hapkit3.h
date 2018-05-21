@@ -25,8 +25,7 @@
   #include "analogin_dma.h"
 #endif
 
-#define LOOP_RATE (2000.0) // 0.5 kHz
-#define LOOP_PERIOD (1.0 / LOOP_RATE) // [sec]
+// extern g_UpdateRate;
 
 // One-pole recursive low-pass filter
 class LowPassFilter
@@ -283,6 +282,9 @@ class Hapkit
         printf("Setting effects [%d]: 0x%X\n", len, effects);
       }
     }
+
+    float getUpdateRate();
+    void setUpdateRate(float rate);
 };
 
 class HapkitHub
