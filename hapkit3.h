@@ -16,7 +16,7 @@
 #endif
 
 #if defined(__AVR__)
-  #import <Arduino.h>
+  #include <Arduino.h>
   // Build for Arduino with Adafruit Motor Shield v1.0
   #include <AFMotor.h>
 #elif defined(__MBED__)
