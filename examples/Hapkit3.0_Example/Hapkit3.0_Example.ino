@@ -1,6 +1,9 @@
 #include <TimerOne.h>
 #include <hapkit3.h>
 
+//#define USE_PRINTF
+
+#if defined(USE_PRINTF)
 static FILE uartout = {0};
 
 static int uart_putchar (char c, FILE *stream)
@@ -8,6 +11,7 @@ static int uart_putchar (char c, FILE *stream)
     Serial.write(c);
     return 0;
 }
+#endif
 
 Hapkit* hapkit = NULL;
 
@@ -46,28 +50,27 @@ const hapkit_effect_t potential_well[] = {
   },
 };
 
-uint8_t generate_pattern(hapkit_effect* arr, float from, float to, float step, float k_spring, float k_dumper)
-{
-  
-}
-
 void hapticLoop() {
   hapkit->getSensor()->readSensor();
 
   if (hapkit->isCalibrated())
   {
     hapkit->update();
-//    hapkit->setForce(-hapkit->getAcceleration() * 0.500); // 500g
+    hapkit->setForce(-hapkit->getAcceleration() * 0.500); // 500g
   }
 }
 
 void setup() {
   // Set up serial communication
   Serial.begin(2000000);
+
+#if defined(USE_PRINTF)
   ////////// DEBUG stuff
   fdev_setup_stream (&uartout, uart_putchar, NULL, _FDEV_SETUP_WRITE);
   stdout = &uartout;
   //////////////////////
+#endif
+
   hapkit = new Hapkit(HAPKIT_YELLOW, 2, A2);
   hapkit->setUpdateRate(2000.0);
 
@@ -76,13 +79,13 @@ void setup() {
 
   hapkit->calibrate();
 
-  hapkit->setEffects(potential_well, sizeof(potential_well) / sizeof(hapkit_effect_t));
+//  hapkit->setEffects(potential_well, sizeof(potential_well) / sizeof(hapkit_effect_t));
 }
 
 void loop() {
   if (hapkit->isCalibrated())
   {
   }
-//  printf("%1.5f\n", hapkit.getAcceleration());
+//  printf("%d\n", hapkit->getSensor()->getPosition());
   delay(50);
 }
