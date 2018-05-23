@@ -8,22 +8,19 @@
     #define M_PI                      (3.14159265358979323846f)
 #endif
 
-#ifndef max
-    #define max(a, b)                 ((a > b ? a : b))
-#endif
-#ifndef min
-    #define min(a, b)                 ((a < b ? a : b))
-#endif
+// Build for Mbed with X Nucleo IHM04A1
+#include <L6206.h>
 
 #if defined(__AVR__)
   #include <Arduino.h>
-  // Build for Arduino with Adafruit Motor Shield v1.0
-  // #include <AFMotor.h>
-  // Build for Arduino with Adafruit Motor Shield v2.0
-  #include <Adafruit_MotorShield.h>
 #elif defined(__MBED__)
-  // Build for Mbed with X Nucleo IHM04A1
-  #include <L6206.h>
+  #ifndef max
+      #define max(a, b)                 ((a > b ? a : b))
+  #endif
+  #ifndef min
+      #define min(a, b)                 ((a < b ? a : b))
+  #endif
+
   #include "analogin_dma.h"
 #endif
 
@@ -130,21 +127,10 @@ class HapkitMotor
 {
   private:
     uint8_t motor_id;
-#if defined(__AVR__)
-    // AF_DCMotor* motor;
-    Adafruit_MotorShield* AFMS;
-    Adafruit_DCMotor *motor;
-#elif defined(__MBED__)
     L6206* motor;
-#endif
-
   public:
     HapkitMotor(uint8_t motornum);
-#if defined(__AVR__)
-    void run(uint8_t direction);
-#elif defined(__MBED__)
     void run(motorDir_t direction);
-#endif
     void setSpeed(float duty);
     void stop();
 };

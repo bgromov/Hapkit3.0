@@ -393,9 +393,10 @@ void Hapkit::update()
 
         // int len = sizeof(pattern) / sizeof(pattern[0]);
 
-        double k_spring = 500.0; // define the stiffness of a virtual spring in N/m
-        double k_dumper = 0.05;//sqrt(k_spring * 0.050) * 2; //[Ns/m]
-        float force = -k_spring * xh;
+        // double k_spring = 500.0; // define the stiffness of a virtual spring in N/m
+        // double k_dumper = 0.05;//sqrt(k_spring * 0.050) * 2; //[Ns/m]
+        // float force = -k_spring * xh;
+        float force = 0.0;
 
         for (int i = 0; i < this->effects_len; i++) {
             double dx = xh - this->effects[i].position;
@@ -405,9 +406,9 @@ void Hapkit::update()
                 // printf("force: %1.5f\n", force);
                 break;
             }
-            //  else {
-            //   force = 0.0;
-            // }
+             else {
+              force = 0.0;
+            }
         }
         this->setForce(force);
     }
