@@ -18,7 +18,9 @@
 #if defined(__AVR__)
   #include <Arduino.h>
   // Build for Arduino with Adafruit Motor Shield v1.0
-  #include <AFMotor.h>
+  // #include <AFMotor.h>
+  // Build for Arduino with Adafruit Motor Shield v2.0
+  #include <Adafruit_MotorShield.h>
 #elif defined(__MBED__)
   // Build for Mbed with X Nucleo IHM04A1
   #include <L6206.h>
@@ -129,7 +131,9 @@ class HapkitMotor
   private:
     uint8_t motor_id;
 #if defined(__AVR__)
-    AF_DCMotor* motor;
+    // AF_DCMotor* motor;
+    Adafruit_MotorShield* AFMS;
+    Adafruit_DCMotor *motor;
 #elif defined(__MBED__)
     L6206* motor;
 #endif

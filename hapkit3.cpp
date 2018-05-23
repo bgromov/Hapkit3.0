@@ -106,18 +106,21 @@ HapkitMotor::HapkitMotor(uint8_t motornum)
 {
   #if defined(__AVR__)
     motor_id = motornum;
-    switch(motor_id)
-    {
-      case 1:
-      case 2:
-        motor = new AF_DCMotor(motor_id, MOTOR12_64KHZ);
-        break;
-      case 3:
-      case 4:
-        motor = new AF_DCMotor(motor_id, MOTOR34_64KHZ);
-        break;
-    }
+    // switch(motor_id)
+    // {
+    //   case 1:
+    //   case 2:
+    //     motor = new AF_DCMotor(motor_id, MOTOR12_64KHZ);
+    //     break;
+    //   case 3:
+    //   case 4:
+    //     motor = new AF_DCMotor(motor_id, MOTOR34_64KHZ);
+    //     break;
+    // }
+  AFMS = new Adafruit_MotorShield();
+  motor = AFMS->getMotor(motor_id);
 
+  AFMS->begin();
   motor->setSpeed(0);
   motor->run(FORWARD);
 
