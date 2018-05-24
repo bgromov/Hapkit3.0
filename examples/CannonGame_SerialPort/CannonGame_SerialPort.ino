@@ -5,12 +5,46 @@
 
 #define RECVBUFSIZE 512
 
+const hapkit_effect_t potential_well[] = {
+  {
+    .position = -0.04,
+    .width = 0.003,
+    .k_spring = 700.0,
+    .k_dumper = 5.7,
+  },
+  {
+    .position = -0.02,
+    .width = 0.003,
+    .k_spring = 700.0,
+    .k_dumper = 5.7,
+  },
+//  {
+//    .position = 0.0,
+//    .width = 0.010,
+//    .k_spring = 1500.0,
+//    .k_dumper = 5.7,
+//  },
+  {
+    .position = 0.02,
+    .width = 0.003,
+    .k_spring = 700.0,
+    .k_dumper = 5.7,
+  },
+  {
+    .position = 0.04,
+    .width = 0.003,
+    .k_spring = 700.0,
+    .k_dumper = 5.7,
+  },
+};
+
 struct Packet
 {
   float force;
   float position;
   float velocity;
   float acceleration;
+  bool  button;
 };
 
 char recvBuf[RECVBUFSIZE] = { '\0' };
@@ -41,6 +75,8 @@ void snd() {
   Serial.print(packet->velocity, 5);
   Serial.print(" ");
   Serial.print(packet->acceleration, 5);
+  Serial.print(" ");
+  Serial.print(packet->button);
   Serial.print("\n");
 }
 
@@ -78,6 +114,14 @@ void parseMsg() {
 
 int counter = 0;
 
+uint8_t buttonPin = 13;
+uint8_t button = 0;
+uint8_t lastButton = 0;
+
+uint8_t mode = 0;
+
+float force = 0.0;
+
 void hapticLoop()
 {
   hapkit->getSensor()->readSensor();
@@ -86,13 +130,20 @@ void hapticLoop()
   {
     hapkit->update();
 
-    hapkit->setForce(-(hapkit->getPosition() - 0.045) * 50.0f); // Slingshot band
-//    hapkit->setForce(-hapkit->getAcceleration() * 0.500); // 500g - Slingshot angle
-//    hapkit->setForce(-hapkit->getAcceleration() * 1.500); // 1500g - Rocket dynamics (angle)
+    force = hapkit->calcEffectsForce();
+
+    // Handle buttons events
+    button = digitalRead(buttonPin);
+    if (button - lastButton > 0) // rising edge
+    {
+      mode++;
+    }
+    lastButton = button;
 
     packet->position = hapkit->getPosition();
     packet->velocity = hapkit->getVelocity();
     packet->acceleration = hapkit->getAcceleration();
+    packet->button = button;
 
     if ((counter++) % 10 == 0)
     {
@@ -108,16 +159,40 @@ void setup()
 {
   Serial.begin(BAUD_RATE);
 
-  hapkit = new Hapkit(HAPKIT_YELLOW, 2, A2);
+  // Set up button pin
+  pinMode(buttonPin, OUTPUT);
+  digitalWrite(buttonPin, LOW);
+  pinMode(buttonPin, INPUT_PULLUP);
+
+  hapkit = new Hapkit(HAPKIT_YELLOW, 1, A2);
 
   hapkit->setUpdateRate(1000.0); // 1kHz
   timer_tck.initialize(1000000 / hapkit->getUpdateRate());
   timer_tck.attachInterrupt(hapticLoop);
 
   hapkit->calibrate();
+
+  mode = 0;
 }
 
 void loop()
 {
-  // Empty loop
+  switch(mode % 5)
+  {
+    case 0:
+      hapkit->setForce(0.0); // Free space
+      break;
+    case 1:
+      hapkit->setForce(force); // Slingshot band with holds
+      break;
+    case 2:
+      hapkit->setForce(-(hapkit->getPosition() - 0.045) * 50.0 - hapkit->getVelocity() * 2.5); // Slingshot band
+      break;
+    case 3:
+      hapkit->setForce(-hapkit->getAcceleration() * 0.500);// -hapkit->getVelocity() * 0.05); // 500g - Slingshot angle
+      break;
+    case 4:
+      hapkit->setForce(-hapkit->getAcceleration() * 1.500 - hapkit->getVelocity() * 1.0); // 1500g - Rocket dynamics (angle)
+      break;
+  }
 }
