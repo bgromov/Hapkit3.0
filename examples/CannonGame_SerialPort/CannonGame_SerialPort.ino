@@ -1,9 +1,17 @@
 #include <TimerOne.h>
 #include <hapkit3.h>
 
-#define BAUD_RATE 921600 // The maximum supported by Windows side
+#define BAUD_RATE 2000000 //921600 // The maximum supported by Windows side
 
 #define RECVBUFSIZE 512
+
+static FILE uartout = {0};
+
+static int uart_putchar (char c, FILE *stream)
+{
+    Serial.write(c);
+    return 0;
+}
 
 const hapkit_effect_t potential_well[] = {
   {
@@ -53,20 +61,19 @@ bool string_complete = false;
 TimerOne timer_tck;
 TimerOne send_timer;
 Hapkit* hapkit = NULL;
-static FILE uartout = {0};
 Packet *packet = new Packet();
 
-void serialEvent() {
-  while (Serial.available() > 0) {
-    char chr = Serial.read();
-    if (chr == '\n') {
-      recvBuf[recvBytes++] = '\0';
-      string_complete = true;
-      continue;
-    }
-    recvBuf[recvBytes++] = chr;
-  }
-}
+// void serialEvent() {
+//   while (Serial.available() > 0) {
+//     char chr = Serial.read();
+//     if (chr == '\n') {
+//       recvBuf[recvBytes++] = '\0';
+//       string_complete = true;
+//       continue;
+//     }
+//     recvBuf[recvBytes++] = chr;
+//   }
+// }
 
 void snd() {
   Serial.print("Prm ");
@@ -76,7 +83,7 @@ void snd() {
   Serial.print(" ");
   Serial.print(packet->acceleration, 5);
   Serial.print(" ");
-  Serial.print(packet->button);
+  Serial.print(!packet->button);
   Serial.print("\n");
 }
 
@@ -145,12 +152,12 @@ void hapticLoop()
     packet->acceleration = hapkit->getAcceleration();
     packet->button = button;
 
-    if ((counter++) % 10 == 0)
+    if ((counter++) % 30 == 0)
     {
       snd(); // Send data 10 times slower than the hapticLoop()
-      if (string_complete) {
-        parseMsg();
-      }
+      // if (string_complete) {
+      //   parseMsg();
+      // }
     }
   }
 }
@@ -158,6 +165,9 @@ void hapticLoop()
 void setup()
 {
   Serial.begin(BAUD_RATE);
+
+  fdev_setup_stream (&uartout, uart_putchar, NULL, _FDEV_SETUP_WRITE);
+  stdout = &uartout;
 
   // Set up button pin
   pinMode(buttonPin, OUTPUT);
