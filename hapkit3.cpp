@@ -121,6 +121,9 @@ HapkitMotor::HapkitMotor(uint8_t motornum)
   motor = AFMS->getMotor(motor_id);
 
   AFMS->begin();
+
+  TWBR = ((F_CPU /400000l) - 16) / 2; // Change the i2c clock to 400KHz
+
   motor->setSpeed(0);
   motor->run(FORWARD);
 
@@ -203,10 +206,10 @@ Hapkit::Hapkit(const hapkit_kinematics_t kin, uint8_t motornum, PinName sensor_p
 #endif
 : motornum(motornum), sensor_pin(sensor_pin),
   motor(motornum), sensor(sensor_pin), effects(NULL), effects_len(0),
-  duty_th(0.01f),
+  duty_th(0.10f),
   // pos_filter(500.0, g_UpdateRate),
-  vel_filter(10.0, g_UpdateRate),
-  acc_filter(5.0, g_UpdateRate)
+  vel_filter(5.0, g_UpdateRate),
+  acc_filter(3.0, g_UpdateRate)
 {
     // Kinematics variables
     rp = kin.pulley_radius;
@@ -284,7 +287,7 @@ void Hapkit::calibrate()
 
   this->stopLoop(); // Make sure the haptic loop is not running
 
-  motor.setSpeed(0.6);
+  motor.setSpeed(0.3);
 
   while(!calibrated)
   {
@@ -377,10 +380,10 @@ void Hapkit::update()
     lastVh = vh;
     lastLastAh = lastAh;
     lastAh = ah;
+}
 
-    // double pattern[] = {0.0};
-    // double element_width = 0.20; //[m]
-
+float Hapkit::calcEffectsForce()
+{
     if (this->effects && this->effects_len)
     {
         // printf("Setting effects [%d]: 0x%X\n", this->effects_len, this->effects);
@@ -393,7 +396,7 @@ void Hapkit::update()
 
         // int len = sizeof(pattern) / sizeof(pattern[0]);
 
-        double k_spring = 500.0; // define the stiffness of a virtual spring in N/m
+        double k_spring = 100.0; // define the stiffness of a virtual spring in N/m
         double k_dumper = 0.05;//sqrt(k_spring * 0.050) * 2; //[Ns/m]
         float force = -k_spring * xh;
 
@@ -409,12 +412,13 @@ void Hapkit::update()
             //   force = 0.0;
             // }
         }
-        this->setForce(force);
+        return force;
     }
 }
 
 void Hapkit::setForce(float force)
 {
+
   // printf("force: %1.5f\r\n", force);
 
   Tp = (force * rh / rs) * rp;

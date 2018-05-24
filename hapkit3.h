@@ -248,6 +248,7 @@ class Hapkit
     void calibrate();
     void reset();
     void setForce(float force);
+    float calcEffectsForce();
 
     inline float getPosition()
     {
