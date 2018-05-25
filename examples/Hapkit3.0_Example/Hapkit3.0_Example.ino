@@ -101,6 +101,8 @@ void setup() {
 
   hapkit->calibrate();
 
+  hapkit->configureFilters(10.0, 5.0);
+
   hapkit->setEffects(potential_well, sizeof(potential_well) / sizeof(hapkit_effect_t));
   mode = 0;
 }

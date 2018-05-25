@@ -33,19 +33,10 @@
 class LowPassFilter
 {
   float a0, b1, y1;
-  inline void setFc(float fc)
-  {
-    y1 = 0.0;
-    b1 = exp(-2.0 * M_PI * fc);
-    a0 = 1.0 - b1;
-    printf("b1: %1.5f, a0: %1.5f\n", b1, a0);
-  }
 public:
   LowPassFilter()
   {
-    y1 = 0.0;
-    b1 = 0.0;
-    a0 = 1.0;
+    this->reset();
   }
   LowPassFilter(float band_freq, float sampling_freq)
   {
@@ -55,9 +46,19 @@ public:
   {
     setFc(fc);
   }
+
   inline void reset()
   {
     y1 = 0.0;
+    b1 = 0.0;
+    a0 = 1.0;
+  }
+  inline void setFc(float fc)
+  {
+    y1 = 0.0;
+    b1 = exp(-2.0 * M_PI * fc);
+    a0 = 1.0 - b1;
+    printf("b1: %1.5f, a0: %1.5f\n", b1, a0);
   }
   inline float filter(float x)
   {
@@ -245,6 +246,11 @@ class Hapkit
     Hapkit(hapkit_kinematics_t kin, uint8_t motornum, PinName sensor_pin);
 #endif
     void configure(float duty_threshold = 0.01f);
+    void configureFilters(float velFc = 10.0, float accFc = 5.0)
+    {
+      vel_filter.setFc(velFc);
+      acc_filter.setFc(accFc);
+    }
     void calibrate();
     void reset();
     void setForce(float force);

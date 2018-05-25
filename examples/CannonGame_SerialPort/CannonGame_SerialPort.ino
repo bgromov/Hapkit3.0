@@ -182,6 +182,8 @@ void setup()
 
   hapkit->calibrate();
 
+  hapkit->configureFilters(10.0, 5.0);
+
   mode = 0;
 }
 
