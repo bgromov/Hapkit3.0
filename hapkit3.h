@@ -36,7 +36,9 @@ class LowPassFilter
 public:
   LowPassFilter()
   {
-    this->reset();
+    y1 = 0.0;
+    b1 = 0.0;
+    a0 = 1.0;
   }
   LowPassFilter(float band_freq, float sampling_freq)
   {
@@ -50,8 +52,6 @@ public:
   inline void reset()
   {
     y1 = 0.0;
-    b1 = 0.0;
-    a0 = 1.0;
   }
   inline void setFc(float fc)
   {
