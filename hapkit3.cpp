@@ -106,6 +106,7 @@ HapkitMotor::HapkitMotor(uint8_t motornum)
 {
   #if defined(__AVR__)
     motor_id = motornum;
+    // Adafruit Motor Shield V1
     // switch(motor_id)
     // {
     //   case 1:
@@ -117,6 +118,7 @@ HapkitMotor::HapkitMotor(uint8_t motornum)
     //     motor = new AF_DCMotor(motor_id, MOTOR34_64KHZ);
     //     break;
     // }
+  // Adafruit Motor Shield V2
   AFMS = new Adafruit_MotorShield();
   motor = AFMS->getMotor(motor_id);
 
@@ -124,6 +126,7 @@ HapkitMotor::HapkitMotor(uint8_t motornum)
 
   TWBR = ((F_CPU /400000l) - 16) / 2; // Change the i2c clock to 400KHz
 
+  // Make sure the motor is not running
   motor->setSpeed(0);
   motor->run(FORWARD);
 
@@ -170,6 +173,7 @@ void HapkitMotor::setSpeed(float duty)
 {
   uint8_t duty_u8;
 
+  // Clamp the duty cycle
   if (duty > 1.0f)
   {
     duty = 1.0f;
@@ -285,16 +289,20 @@ void Hapkit::calibrate()
   float e_i = 0.0;
   float e_d = 0.0;
 
-  this->stopLoop(); // Make sure the haptic loop is not running
+  this->stopLoop(); // Make sure the haptic loop is not running (only on STM32)
 
+  // Slowly move to one end
   motor.setSpeed(0.3);
 
   while(!calibrated)
   {
+    // Read sensor
     int16_t cur_pos = sensor.getPosition();
 
+    // Keep track of the maximum and minimum sensor readings
     minPos = min(cur_pos, minPos);
     maxPos = max(cur_pos, maxPos);
+    // Calculate the middle position
     zeroPos = maxPos - (abs(minPos) + abs(maxPos)) / 2.0;
 
     #if defined(__AVR__)
@@ -307,19 +315,22 @@ void Hapkit::calibrate()
 
     calibration_counter++;
 
+    // Move to one mechanical limit
     if (calibration_counter < 700)
     {
       motor.run(BACKWARD);
     }
+    // Move to another mechanical limit
     else if (calibration_counter < 1400)
     {
       motor.run(FORWARD);
     }
+    // Move to calculated zero position
     else if (calibration_counter < 2100)
     {
+        // A kind of PID controller
         e = (cur_pos - zeroPos) / (float)(abs(minPos) + abs(maxPos));
         e_d = e_last - e;
-//        float pid = ( 0.02 * 0.45 * e + 1.2 * 0.02 / 0.06 * e_i + 3.0 * 0.02 * 0.06 / 40.0 * e_d);
         e_i += e;
         e_last = e;
         float s = (e * 2.5f + e_i * 0.03f + e_d * 0.20f);
@@ -334,6 +345,7 @@ void Hapkit::calibrate()
     }
     else
     {
+        // Ouput calibration results
         printf("Calibrated\r\n");
 
         printf("Min: %d\r\n", minPos);
@@ -342,8 +354,11 @@ void Hapkit::calibrate()
 
         printf("Final position error: %1.5f\r\n", e);
 
+        // Set the zero
         sensor.setZero(zeroPos);
 
+        // Calculate the scaling factor for the sector,
+        // (transforms sensor readings from ADC units to radians)
         sec_K = sec_span / (fabs((float)minPos) + fabs((float)maxPos));
 
         calibrated = true;
@@ -360,21 +375,14 @@ void Hapkit::calibrate()
 void Hapkit::update()
 {
     alpha_h = sec_K * sensor.getPosition(); // sector current rotation angle
-    // xh = pos_filter.filter(rh * alpha_h);
-    xh = rh * alpha_h;
+    xh = rh * alpha_h;  // linear position of the handle
 
-//    printf("alpha: %1.5f\r\n", alpha_h * 180.0 / M_PI);
-//    printf("x: %1.5f\r\n", xh);
+    // Calculate and filter velocity
+    vh = vel_filter.filter((xh-lastXh) / LOOP_PERIOD); // First derivative
+    // Calculate and filter acceleration
+    ah = acc_filter.filter((vh-lastVh) / LOOP_PERIOD); // Second derivative
 
-    // float vel_decay = 0.95;
-    // vh = -(vel_decay*vel_decay)*lastLastVh + 2*vel_decay*lastVh + (1-vel_decay)*(1-vel_decay)*(xh-lastXh) / LOOP_PERIOD;
-    // ah = -(.45*.45)*lastLastAh + 2*.45*lastAh + (1-.45)*(1-.45)*(vh-lastVh) / LOOP_PERIOD;
-    // float acc_decay = 0.97;
-    // ah = -(acc_decay * acc_decay)*lastLastAh + 2*acc_decay*lastAh + (1-acc_decay)*(1-acc_decay)*(vh-lastVh) / LOOP_PERIOD;
-    // ah = (acc_decay)*lastAh + (1-acc_decay)*(vh-lastVh) / LOOP_PERIOD;
-    // ah = (vh-lastVh) / LOOP_PERIOD;
-    vh = vel_filter.filter((xh-lastXh) / LOOP_PERIOD);
-    ah = acc_filter.filter((vh-lastVh) / LOOP_PERIOD);
+    // Remember values until the next iteration
     lastXh = xh;
     lastLastVh = lastVh;
     lastVh = vh;
@@ -386,26 +394,17 @@ float Hapkit::calcEffectsForce()
 {
     if (this->effects && this->effects_len)
     {
-        // printf("Setting effects [%d]: 0x%X\n", this->effects_len, this->effects);
-        // Lab 4 Step 1.3: render a virtual spring
-        // double k_spring = 150; // define the stiffness of a virtual spring in N/m
-        //  force = -k_spring*xh;
-        // Lab 4 Step 2.4: render a virtual damper
-        // double k_dumper = 0.05;//sqrt(k_spring * 0.050) * 2; //[Ns/m]
-        //  force = -k_dumper * vh - k_spring * xh;
-
-        // int len = sizeof(pattern) / sizeof(pattern[0]);
-
         double k_spring = 100.0; // define the stiffness of a virtual spring in N/m
-        double k_dumper = 0.05;//sqrt(k_spring * 0.050) * 2; //[Ns/m]
-        float force = -k_spring * xh;
+        double k_damper = 0.05;//sqrt(k_spring * 0.050) * 2; //[Ns/m]
+        float force = -k_spring * xh; // virtual spring
 
+        // Interate over the array of haptic effects
         for (int i = 0; i < this->effects_len; i++) {
+            // Check if the handle is in the range of current effect
             double dx = xh - this->effects[i].position;
             if (fabs(dx) < this->effects[i].width / 2.0) {
-                // printf("dx: %1.5f\n", dx);
-                force = -this->effects[i].k_dumper * vh - this->effects[i].k_spring * dx;
-                // printf("force: %1.5f\n", force);
+                // If so, generate the force accordingly to the constants
+                force = -this->effects[i].k_damper * vh - this->effects[i].k_spring * dx;
                 break;
             }
             //  else {
@@ -418,9 +417,7 @@ float Hapkit::calcEffectsForce()
 
 void Hapkit::setForce(float force)
 {
-
-  // printf("force: %1.5f\r\n", force);
-
+  // Calculate the required motor torque
   Tp = (force * rh / rs) * rp;
 
   //*************************************************************
@@ -428,7 +425,7 @@ void Hapkit::setForce(float force)
   //*************************************************************
 
   // Compute the duty cycle required to generate Tp (torque at the motor pulley)
-  duty = sqrt(fabs(Tp) / 0.0146);
+  duty = sqrt(fabs(Tp) / 0.0146); // the magic number here is the motor constant
 
   // Make sure the duty cycle is between 0 and 100%
   if (duty > 1) {
@@ -437,10 +434,7 @@ void Hapkit::setForce(float force)
     duty = 0.0;
   }
 
-//  Serial.println(duty, 5);
-
- // printf("duty: %1.5f\r\n", output);
-
+  // If the duty cycle is below the threshold cut off the power
   if (duty < duty_th) {
     duty = 0.0;
     motor.stop();
@@ -455,6 +449,7 @@ void Hapkit::setForce(float force)
     }
   }
 
+  // Set the motor speed/duty
   motor.setSpeed(duty);
 }
 
