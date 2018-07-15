@@ -6,9 +6,9 @@
 # Datatypes (KEYWORD1)
 #######################################
 
-Hapkit			KEYWORD1
+Hapkit	KEYWORD1
 HapkitSensor	KEYWORD1
-HapkitMotor		KEYWORD1
+HapkitMotor	KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)
